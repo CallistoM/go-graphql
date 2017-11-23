@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"graphql_server/db"
 
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/lib/pq"
 )
 
@@ -30,11 +30,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := gorm.Open("postgres", "host=127.0.0.1 user=mike-work dbname=graphql sslmode=disable password=''")
+	conn, err := db.Connect("127.0.0.1", "graphql", "mike-work", "''")
+
 	if err != nil {
-		log.Fatal(err)
+		panic(err.Error())
 	}
-	defer db.Close()
+
+	db.AutoMigrate()
 
 	// serve HTTP
 	http.Handle("/graphql", h)
