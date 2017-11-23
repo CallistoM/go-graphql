@@ -1,31 +1,38 @@
 package main
 
 import (
-	"database/sql"
+	"fmt"
+
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
-var db *sql.DB
+var db *gorm.DB
 
 func InsertUser(user *User) error {
 	var id int
-	err := db.QueryRow(`
-		INSERT INTO users(email)
-		VALUES ($1)
-		RETURNING id
-	`, user.Email).Scan(&id)
-	if err != nil {
-		return err
-	}
+	err := db.Create(&user)
+
+	fmt.Println(err)
+
+	// err := db.QueryRow(`
+	// 	INSERT INTO users(email)
+	// 	VALUES ($1)
+	// 	RETURNING id
+	// `, user.Email).Scan(&id)
 	user.ID = id
 	return nil
 }
 
 func GetUserByID(id int) (*User, error) {
 	var email string
-	err := db.QueryRow("SELECT email FROM users WHERE id=$1", id).Scan(&email)
-	if err != nil {
-		return nil, err
-	}
+
+	user := User{}
+
+	err := db.Where("id = ?", id).First(&user)
+
+	fmt.Println(err)
+
 	return &User{
 		ID:    id,
 		Email: email,
@@ -33,32 +40,18 @@ func GetUserByID(id int) (*User, error) {
 }
 
 func GetUsers() ([]*User, error) {
-	rows, err := db.Query("SELECT * FROM users")
-	var id int
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
-	var (
-		users = []*User{}
-		email string
-	)
+	var allUsers []*User
 
-	for rows.Next() {
-		if err = rows.Scan(&id, &email); err != nil {
-			return nil, err
-		}
-		users = append(users, &User{ID: id, Email: email})
-	}
+	db.Find(&allUsers)
 
-	return users, nil
+	return &allUsers, nil
 
 }
 
 func RemoveUserByID(id int) error {
-	_, err := db.Exec("DELETE FROM users WHERE id=$1", id)
-	return err
+	err := db.Where("id = ?", id).Delete(&User{})
+	return err.Error
 }
 
 func checkErr(err error) {
